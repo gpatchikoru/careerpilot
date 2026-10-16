@@ -1,0 +1,12 @@
+export type Job = { id: string; title: string; company: string; location: string; workplace: string; salary: string; description: string; url: string; tags: string[]; saved: boolean; source: string; addedAt: string };
+export type ApplicationStatus = 'Saved' | 'In review' | 'Ready to apply' | 'Applied' | 'Interview' | 'Offer' | 'Closed';
+export const statuses: ApplicationStatus[] = ['Saved','In review','Ready to apply','Applied','Interview','Offer','Closed'];
+export type Application = { id: string; jobId: string; title: string; company: string; status: ApplicationStatus; notes: string; date: string; nextStep: string; history: { status: string; date: string }[] };
+export type Profile = { name: string; email: string; headline: string; location: string; roles: string; experience: string; skills: string; salary: string; workAuthorization: string; workplace: string; resume: string; linkedin: string; onboardingComplete: boolean };
+export type Document = { id: string; title: string; type: 'Resume' | 'Cover letter' | 'Outreach' | 'Review'; content: string; jobId: string; createdAt: string; fileId?: string; fileName?: string };
+export type Interview = { id: string; company: string; role: string; date: string; type: string; notes: string; questions: string; feedback: string };
+export type SupportMessage = { id: string; text: string; date: string; author: string };
+export type AppState = { profile: Profile; jobs: Job[]; applications: Application[]; documents: Document[]; interviews: Interview[]; messages: SupportMessage[]; preferences: { dailyGoal: number; weeklyGoal: number; digest: boolean; service: string }; demoLoaded: boolean };
+export type SessionData = { state: AppState; version: number; user: { id: string; name: string; email: string; admin: boolean }; capabilities: { ai: boolean; storage: boolean; billing: boolean } };
+export function emptyState(name='',email=''): AppState { return { profile: {name,email,headline:'',location:'',roles:'',experience:'',skills:'',salary:'',workAuthorization:'',workplace:'Remote',resume:'',linkedin:'',onboardingComplete:false},jobs:[],applications:[],documents:[],interviews:[],messages:[],preferences:{dailyGoal:5,weeklyGoal:25,digest:false,service:'Self-service'},demoLoaded:false }; }
+export type FeatureProps = { state: AppState; update: (next: AppState)=>Promise<boolean>; notify: (message:string)=>void; selectedJobId: string; capabilities: SessionData['capabilities']; navigate: (view:string)=>void };
