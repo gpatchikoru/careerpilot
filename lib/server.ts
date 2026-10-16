@@ -1,6 +1,8 @@
 import { env } from 'cloudflare:workers';
 import { ZodError } from 'zod';
+import { headers } from 'next/headers';
 import { getChatGPTUser, type ChatGPTUser } from '@/app/chatgpt-auth';
+import { AuthConfigurationError, authenticationMode, getCloudflareAccessUser } from './cloudflare-auth';
 import { emptyState, type AppState } from './types';
 import { ApiError, CAS_SQL, RATE_SQL, isAllowedAdmin } from './server-core';
 
@@ -27,9 +29,22 @@ export function capabilities() {
 }
 
 export async function authenticated(): Promise<ChatGPTUser> {
-  const user = await getChatGPTUser();
-  if (!user) throw new ApiError(401, 'Sign in to use your private workspace.', 'sign_in_required');
-  return user;
+  try {
+    // An explicitly configured mode must never silently revert to trusted Sites headers.
+    const mode = authenticationMode(env.CAREERPILOT_AUTH_MODE ?? process.env.CAREERPILOT_AUTH_MODE);
+    const user = mode === 'cloudflare'
+      ? await getCloudflareAccessUser(await headers(), {
+        CF_ACCESS_TEAM_DOMAIN: env.CF_ACCESS_TEAM_DOMAIN ?? process.env.CF_ACCESS_TEAM_DOMAIN,
+        CF_ACCESS_AUD: env.CF_ACCESS_AUD ?? process.env.CF_ACCESS_AUD,
+        OWNER_EMAIL: env.OWNER_EMAIL ?? process.env.OWNER_EMAIL,
+      })
+      : await getChatGPTUser();
+    if (!user) throw new ApiError(401, 'Sign in to use your private workspace.', 'sign_in_required');
+    return user;
+  } catch (error) {
+    if (error instanceof AuthConfigurationError) throw new ApiError(503, 'Sign-in is not configured yet. Please contact the site owner.', 'auth_unavailable');
+    throw error;
+  }
 }
 
 export function isAdmin(user: ChatGPTUser): boolean { return isAllowedAdmin(user.email, runtimeSecret('ADMIN_EMAILS')); }

@@ -37,6 +37,9 @@ const localBindingConfig = {
 };
 
 export default defineConfig(async ({ command }) => {
+  if (process.env.CAREERPILOT_DEPLOY_TARGET === "cloudflare") {
+    return (await import("./vite.cloudflare.config")).cloudflareConfig();
+  }
   // Use Miniflare's local Request.cf placeholder unless fetching is requested.
   process.env.CLOUDFLARE_CF_FETCH_ENABLED ??= "false";
   process.env.WRANGLER_SEND_METRICS ??= "false";

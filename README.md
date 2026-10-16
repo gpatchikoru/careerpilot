@@ -4,7 +4,7 @@ A private career workspace for the owner's personal job search: discovering oppo
 
 ## Working features
 
-- Sign in with ChatGPT and a private saved workspace; hosted access is configured for the owner only.
+- Private saved workspace with owner-only authentication: Cloudflare Access for the custom-domain target, or ChatGPT sign-in for the retained Sites target.
 - Profile and job preferences; configurable application goals.
 - Live public Greenhouse job import from supported company boards, manual opportunity entry, search, location filters, bookmarks, and skills overlap.
 - Application pipeline, status history, notes, next steps, board/list views, CSV export, and weekly activity reports.
@@ -23,11 +23,13 @@ AI features use the OpenAI API and require available API credit. These provider 
 
 ## Stack and hosting
 
-React 19, TypeScript, Vinext/Vite, Cloudflare Workers, D1, R2, and the OpenAI Responses API (`gpt-5.4-mini`). The supplied Sites build integration owns hosted identity and resource provisioning. GitHub stores source and runs CI. GitHub Pages cannot run this application's server routes, private storage, or AI calls.
+React 19, TypeScript, Vinext/Vite, Cloudflare Workers, D1, R2, and the OpenAI Responses API (`gpt-5.4-mini`). GitHub stores source and runs CI. GitHub Pages continues to serve the portfolio; a Worker is required for this app's server routes, private storage, and AI calls.
 
-The private hosting project is managed by Sites via `.openai/hosting.json` and is configured for owner-only access. Publication has not completed; no live deployment URL is claimed. The source hosting repository and the GitHub mirror are separate. A GitHub push runs validation and produces a build artifact; it does not automatically publish a new Sites version. Publish through the Sites workflow after source changes. Do not deploy the Worker on an arbitrary public host while trusting client-supplied `oai-authenticated-*` headers: Sites dispatch supplies and validates those identity headers.
+The deployment target is [patchikoru.com/careercopilot](https://patchikoru.com/careercopilot), using the owner's Cloudflare account and Cloudflare Access. The standalone adapter is configured in `wrangler.careerpilot.jsonc`. Complete the real resource bindings and owner-only Access setup in [the Cloudflare guide](docs/CLOUDFLARE.md) before deployment. This documentation does not claim the target is live.
 
-`patchikoru.com` currently serves the existing portfolio from `gpatchikoru/gpatchikoru.github.io`. `career.patchikoru.com` is only a proposed address and has not been configured for this app.
+The Worker route is `patchikoru.com/careercopilot*`. Its path guard serves only `/careercopilot` and its descendants, forwarding other matches to the existing GitHub Pages origin. The portfolio remains at `patchikoru.com`; no new subdomain is required. Cloudflare is the domain's verified DNS provider and registrar.
+
+The existing private Sites project is retained under `.openai/hosting.json` and remains unpublished. The default `npm run build` and `npm run dev` use that integration. A GitHub push alone does not publish a Sites version. Sites identity headers are trusted only in the Sites adapter; the standalone adapter validates Cloudflare Access JWTs and the owner's email. Neither target automatically migrates saved user data to the other.
 
 ## Local development
 
@@ -41,9 +43,9 @@ node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1
 npm run dev
 ```
 
-Use the printed loopback URL. The starter provides a local-only sign-in simulation at `/signin-with-chatgpt?return_to=/`. It is not included in production.
+Use the printed loopback URL. The Sites starter provides a local-only sign-in simulation at `/signin-with-chatgpt?return_to=/`. It is not included in production. `npm run dev:cloudflare` and `npm run build:cloudflare` select the separate custom-domain adapter at `/careercopilot`; that adapter retains its Access authentication checks. See [Cloudflare setup](docs/CLOUDFLARE.md) for its runtime settings.
 
-Optional runtime variable: `OPENAI_API_KEY` enables AI when the API project has available credit. The backend retains legacy administrative routes gated by the `ADMIN_EMAILS` exact-email allowlist; they are not needed for personal use and have no visible operator workspace. Keep all secret env files untracked. For this workspace, the approved key file lives two directories above the app; start local development with `node --env-file=../../.env.local scripts/run-framework.mjs dev`. Vite passes those values only to the development Worker; production secrets are configured in Sites. Never use `VITE_` or `NEXT_PUBLIC_` for secrets.
+Optional runtime variable: `OPENAI_API_KEY` enables AI when the API project has available credit. The backend retains legacy administrative routes gated by the `ADMIN_EMAILS` exact-email allowlist; they are not needed for personal use and have no visible operator workspace. Keep all secret env files untracked. For this workspace, the approved key file lives two directories above the app; start local development with `node --env-file=../../.env.local scripts/run-framework.mjs dev`. Vite passes those values only to the development Worker. Configure production secrets in the selected hosting target's secret store; existing Sites secrets do not transfer to the standalone Worker. Never use `VITE_` or `NEXT_PUBLIC_` for secrets.
 
 The securely provisioned key expires after 30 days. Rotate the hosted secret before expiration. Never use the key pasted into the chat; it should be revoked.
 
@@ -51,11 +53,12 @@ The securely provisioned key expires after 30 days. Rotate the hosted secret bef
 
 ```sh
 npx tsc --noEmit
-node --experimental-strip-types --test tests/backend.test.mjs
+npm test
 npm run build
+npm run build:cloudflare
 ```
 
-Tests cover real SQLite compare-and-swap and atomic quota semantics, user isolation, operator-message integrity, admin allowlists, origin checks, bounded streamed inputs, upload validation, job sanitization, and AI response extraction. GitHub Actions runs these checks and uploads the built Worker artifact.
+Tests cover real SQLite compare-and-swap and atomic quota semantics, user isolation, legacy admin allowlists, origin checks, bounded streamed inputs, upload validation, job sanitization, AI response extraction, and Cloudflare Access authentication. Build each target separately: both commands write to `dist/`, so deploy only the output from the intended target's latest build. GitHub validation is separate from hosted publication.
 
 ## Limits and maintenance
 

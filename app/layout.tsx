@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { appPath } from "@/lib/app-path";
 
 export const metadata: Metadata = {
   title: "CareerPilot — Your next chapter starts here",
-  description: "Job discovery, tailored resumes, application tracking, and interview preparation.",
+  description: "Your private workspace for job discovery, tailored resumes, and application tracking.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: appPath("/favicon.svg"),
+    shortcut: appPath("/favicon.svg"),
   },
 };
 

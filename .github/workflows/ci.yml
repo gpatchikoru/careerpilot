@@ -18,8 +18,10 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npx tsc --noEmit
-      - run: node --experimental-strip-types --test tests/backend.test.mjs
+      - run: npm test
       - run: npm run build
+      - run: npm run build:cloudflare
+      - run: npm run test:cloudflare
       - uses: actions/upload-artifact@v4
         with:
           name: careerpilot-worker
